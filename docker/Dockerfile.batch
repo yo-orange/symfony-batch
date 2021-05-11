@@ -1,0 +1,26 @@
+FROM php:7.4-fpm
+
+RUN cd '/' \
+    && php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
+    && php composer-setup.php \
+    && php -r "unlink('composer-setup.php');" \
+    && mv composer.phar /usr/local/bin/composer
+
+RUN cd '/' \
+    && php -r "copy('https://get.symfony.com/cli/installer', 'symfony-cli.sh');" \
+    && bash symfony-cli.sh --install-dir /usr/local/bin \
+    && php -r "unlink('symfony-cli.sh');"
+
+RUN apt-get update \
+    && apt-get install -y git \
+    && echo 'gd' \
+    && apt-get install -y unzip libpq-dev libfreetype6-dev libjpeg62-turbo-dev libpng-dev \
+    && echo 'zip' \
+    && apt-get install -y libzip-dev
+
+RUN docker-php-ext-install pdo_mysql \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd \
+    && docker-php-ext-install zip
+
+CMD ["/bin/bash"]
