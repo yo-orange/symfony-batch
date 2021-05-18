@@ -7,6 +7,7 @@ use App\Service\Tasklet\ProcessorInterface;
 use App\Service\Tasklet\ReaderInterface;
 use App\Service\Tasklet\WriterInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Exception;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -22,17 +23,18 @@ abstract class TaskletCommand extends Command
 
     private WriterInterface $writer;
 
-    private ?EntityManagerInterface $batchEntityManager;
+    private ?EntityManagerInterface $entityManager = null;
 
-    private ?BatchExecutionService $batchExecutionService;
+    private ?EntityManagerInterface $batchEntityManager = null;
+
+    private ?BatchExecutionService $batchExecutionService = null;
 
     public function __construct(
         LoggerInterface $logger,
         ReaderInterface $reader,
         ProcessorInterface $processor,
         WriterInterface $writer,
-        ?EntityManagerInterface $batchEntityManager,
-        ?BatchExecutionService $batchExecutionService
+        ?EntityManagerInterface $entityManager = null
     ) {
         parent::__construct();
 
@@ -40,8 +42,7 @@ abstract class TaskletCommand extends Command
         $this->reader = $reader;
         $this->processor = $processor;
         $this->writer = $writer;
-        $this->batchEntityManager = $batchEntityManager;
-        $this->batchExecutionService = $batchExecutionService;
+        $this->entityManager = $entityManager;
     }
 
     /**
@@ -53,12 +54,16 @@ abstract class TaskletCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        if ($this->batchEntityManager !== null) {
+        if ($this->isMultiplePrevention()) {
             $this->batchEntityManager->beginTransaction();
             $this->batchExecutionService->start(static::$defaultName);
         }
 
         try {
+            if ($this->entityManager !== null) {
+                $this->entityManager->beginTransaction();
+            }
+
             $count = 0;
 
             $this->logger->info("start tasklet.");
@@ -81,8 +86,17 @@ abstract class TaskletCommand extends Command
             $this->writer->close();
 
             $this->logger->info("end tasklet.");
+
+            if ($this->entityManager !== null) {
+                $this->entityManager->commit();
+            }
+        } catch (Exception $e) {
+            if ($this->entityManager !== null) {
+                $this->entityManager->rollback();
+            }
+            throw $e;
         } finally {
-            if ($this->batchEntityManager !== null) {
+            if ($this->isMultiplePrevention()) {
                 $this->batchExecutionService->finish(static::$defaultName);
                 $this->batchEntityManager->commit();
             }
@@ -90,4 +104,30 @@ abstract class TaskletCommand extends Command
 
         return Command::SUCCESS;
     }
+
+    /**
+     * @required
+     */
+    public function setBatchExecutionService(BatchExecutionService $batchExecutionService): void
+    {
+        $this->batchExecutionService = $batchExecutionService;
+    }
+
+    /**
+     * @required
+     */
+    public function setBatchEntityManager(EntityManagerInterface $batchEntityManager): void
+    {
+        $this->batchEntityManager = $batchEntityManager;
+    }
+
+    /**
+     * 多重起動防止判定.
+     *
+     * @return boolean
+     */
+    public function isMultiplePrevention() {
+        return false;
+    }
+
 }

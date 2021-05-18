@@ -3,11 +3,9 @@
 namespace App\Command;
 
 use App\Command\TaskletCommand;
-use App\Service\BatchExecutionService;
 use App\Service\ExportProduct\ExportProductReader;
 use App\Service\ExportProduct\ExportProductWriter;
 use App\Service\Tasklet\NoOpProcessor;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 class ExportProductCommand extends TaskletCommand
@@ -19,15 +17,18 @@ class ExportProductCommand extends TaskletCommand
         ExportProductReader $reader,
         NoOpProcessor $processor,
         ExportProductWriter $writer,
-        LoggerInterface $logger,
-        EntityManagerInterface $batchEntityManager,
-        BatchExecutionService $batchExecutionService
+        LoggerInterface $logger
     ) {
-        parent::__construct($logger, $reader, $processor, $writer, $batchEntityManager, $batchExecutionService);
+        parent::__construct($logger, $reader, $processor, $writer, null);
     }
 
     protected function configure(): void
     {
         $this->setDescription(self::$defaultDescription);
+    }
+
+    public function isMultiplePrevention()
+    {
+        return true;
     }
 }

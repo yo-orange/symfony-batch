@@ -19,7 +19,7 @@ class ImportProductCommand extends TaskletCommand
         ImportProductWriter $writer,
         LoggerInterface $eventlogger
     ) {
-        parent::__construct($eventlogger, $reader, $processor, $writer, null, null);
+        parent::__construct($eventlogger, $reader, $processor, $writer);
     }
 
     protected function configure(): void

@@ -16,7 +16,7 @@ code --install-extension damianbal.vs-phpclassgen
 
 code --install-extension grapecity.gc-excelviewer
 code --install-extension redhat.vscode-yaml
-
+code --install-extension ms-vscode-remote.remote-containers
 
 ```
 
